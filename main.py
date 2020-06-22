@@ -62,7 +62,7 @@ class Ball:
         pygame.display.flip()
 
     def update(self):
-        sleep(0.1)
+
         self.hide()
         self.x_position = self.x_position + self.x_velocity
         self.y_position = self.y_position + self.y_velocity
@@ -72,17 +72,26 @@ class Ball:
     def check_paddle(self, paddle):
         border_width = 10  # todo: not hardcode this
         width_and_radius = border_width + self.radius
-        if self.x_position >= self.screen.get_width() - width_and_radius:
+        if self.x_position < self.screen.get_width() - width_and_radius:
+            logging.debug("ball in play")
+            return True, 0
+        else:
+            logging.info("Ball at end")
             paddle_top, paddle_bottom = paddle.get_position()
-            if self.y_position >= paddle_top and self.y_position <= paddle_bottom:
+            if self.y_position in range(paddle_top, paddle_bottom+1):
                 self.x_velocity = self.x_velocity * -1
+                logging.info("Hit - Add Score")
+                return True, 1
+            else:
+                logging.info("Missed - Game Over")
+                return False, 0
 
 
 class Paddle:
     def __init__(self, screen):
         self.screen = screen
         self.width = 10  # todo fix, should be border width
-        self.height = self.screen.get_height() / 10
+        self.height = int(self.screen.get_height() / 10)
         self.x_position = screen.get_width() - self.width
         self.y_position = (self.screen.get_height() / 2) - (self.height / 2)
         self.colour = pygame.Color("white")
@@ -142,8 +151,11 @@ def main():
     args = parse_args()
     if args.debug_mode:
         logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
     pygame.init()
-
+    playing = True
+    score = 0
     SCREEN_WIDTH = 1200
     SCREEN_HEIGHT = 600
     BORDER_WIDTH = 10
@@ -155,14 +167,17 @@ def main():
     paddle = Paddle(screen)
     paddle.show()
 
-    while True:
+    while playing:
         e = pygame.event.poll()
         if e.type == pygame.QUIT:
             break
+
+        sleep(0.02)
         ball.update()
         paddle.update()
-        ball.check_paddle(paddle)
-
+        playing, score_update = ball.check_paddle(paddle)
+        score += score_update
+        logging.info(f"Score is {score}")
 
 if __name__ == "__main__":
     main()
