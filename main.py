@@ -77,7 +77,7 @@ class Ball:
         else:
             logging.info("Ball at end")
             paddle_top, paddle_bottom = paddle.get_position()
-            if self.y_position in range(paddle_top, paddle_bottom + 1):
+            if self.y_position in range(paddle_top-self.radius, paddle_bottom + self.radius):
                 self.x_velocity = self.x_velocity * -1
                 logging.info("Hit - Add Score")
                 return True, 1
@@ -87,14 +87,14 @@ class Ball:
 
 
 class Paddle:
-    def __init__(self, screen):
-        self.screen = screen
-        self.width = 10  # todo fix, should be border width
+    def __init__(self, game_setup):
+        self.screen = game_setup["screen"]
+        self.width = game_setup["BORDER_WIDTH"]
         self.height = int(self.screen.get_height() / 10)
-        self.x_position = screen.get_width() - self.width
+        self.x_position = self.screen.get_width() - self.width
         self.y_position = (self.screen.get_height() / 2) - (self.height / 2)
-        self.colour = pygame.Color("white")
-        self.bg_colour = pygame.Color("black")
+        self.colour = pygame.Color(game_setup["FOREGROUND_COLOUR"])
+        self.bg_colour = pygame.Color(game_setup["BACKGROUND_COLOUR"])
 
     def get_position(self):
         top = self.y_position
@@ -121,16 +121,16 @@ class Paddle:
         self.show()
 
 
-def draw_borders(screen, SCREEN_WIDTH, SCREEN_HEIGHT, BORDER_WIDTH):
-    border_colour = pygame.Color("white")
+def draw_borders(game_setup):
+    border_colour = pygame.Color(game_setup["FOREGROUND_COLOUR"])
     borders = [
-        ((0, 0), (SCREEN_WIDTH, BORDER_WIDTH)),
-        ((0, 0), (BORDER_WIDTH, SCREEN_HEIGHT)),
-        ((0, SCREEN_HEIGHT - BORDER_WIDTH), (SCREEN_WIDTH, BORDER_WIDTH)),
+        ((0, 0), (game_setup["SCREEN_WIDTH"], game_setup["BORDER_WIDTH"])),
+        ((0, 0), (game_setup["BORDER_WIDTH"], game_setup["SCREEN_HEIGHT"])),
+        ((0, game_setup["SCREEN_HEIGHT"] - game_setup["BORDER_WIDTH"]), (game_setup["SCREEN_WIDTH"], game_setup["BORDER_WIDTH"])),
     ]
 
     for border in borders:
-        pygame.draw.rect(screen, border_colour, pygame.Rect(border))
+        pygame.draw.rect(game_setup["screen"], border_colour, pygame.Rect(border))
     pygame.display.flip()
 
 
@@ -166,15 +166,10 @@ def main():
     game_setup["screen"] = pygame.display.set_mode(
         (game_setup["SCREEN_WIDTH"], game_setup["SCREEN_HEIGHT"])
     )
-    draw_borders(
-        game_setup["screen"],
-        game_setup["SCREEN_WIDTH"],
-        game_setup["SCREEN_HEIGHT"],
-        game_setup["BORDER_WIDTH"],
-    )
+    draw_borders(game_setup)
     ball = Ball(game_setup)
     ball.show()
-    paddle = Paddle(game_setup["screen"])
+    paddle = Paddle(game_setup)
     paddle.show()
 
     while playing:
