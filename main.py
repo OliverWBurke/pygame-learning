@@ -73,17 +73,18 @@ class Ball:
     def check_paddle(self, paddle):
         if self.x_position < self.screen.get_width() - self.border_and_ball_width:
             logging.debug("ball in play")
-            return True, 0
+            return 0
         else:
             logging.info("Ball at end")
             paddle_top, paddle_bottom = paddle.get_position()
             if self.y_position in range(paddle_top-self.radius, paddle_bottom + self.radius):
                 self.x_velocity = self.x_velocity * -1
                 logging.info("Hit - Add Score")
-                return True, 1
+                return 1
             else:
                 logging.info("Missed - Game Over")
-                return False, 0
+                self.game_setup["status"] = "game over"
+                return 0
 
 
 class Paddle:
@@ -153,7 +154,6 @@ def main():
     else:
         logging.basicConfig(level=logging.INFO)
     pygame.init()
-    playing = True
 
     game_setup = {
         "score": 0,
@@ -161,7 +161,8 @@ def main():
         "SCREEN_HEIGHT": 600,
         "BORDER_WIDTH": 10,
         "BACKGROUND_COLOUR": 'Black',
-        "FOREGROUND_COLOUR": 'White'
+        "FOREGROUND_COLOUR": 'White',
+        "status": "playing"
     }
     game_setup["screen"] = pygame.display.set_mode(
         (game_setup["SCREEN_WIDTH"], game_setup["SCREEN_HEIGHT"])
@@ -172,17 +173,21 @@ def main():
     paddle = Paddle(game_setup)
     paddle.show()
 
-    while playing:
+    while game_setup["status"] == "playing":
         e = pygame.event.poll()
         if e.type == pygame.QUIT:
             break
-
         sleep(0.02)
         ball.update()
         paddle.update()
-        playing, score_update = ball.check_paddle(paddle)
+        score_update = ball.check_paddle(paddle)
         game_setup['score'] += score_update
         logging.info(f"Score is {game_setup['score']}")
+
+    while game_setup["status"] == "game over":
+        e = pygame.event.poll()
+        if e.type == pygame.KEYDOWN:
+            break
 
 
 if __name__ == "__main__":
