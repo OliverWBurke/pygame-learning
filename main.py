@@ -1,7 +1,79 @@
 from time import sleep
+import random
 import logging
 import argparse
 import pygame
+
+
+class Game:
+    def __init__(self):
+        self.SCREEN_WIDTH = 800
+        self.SCREEN_HEIGHT = 500
+        self.BORDER_WIDTH = 10
+        self.BACKGROUND_COLOUR = "Black"
+        self.FOREGROUND_COLOUR = "White"
+        self.status = "playing"
+        self.score = 0
+        self.screen = self.get_screen()
+        self.draw_borders()
+        self.paddle = Paddle(self)
+        self.balls = []
+        self.balls.append(Ball(self))
+
+    def get_screen(self):
+        return pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
+
+    def add_score(self):
+        self.score += 1
+
+    def draw_borders(self):
+        border_colour = pygame.Color(self.FOREGROUND_COLOUR)
+        borders = [
+            ((0, 0), (self.SCREEN_WIDTH, self.BORDER_WIDTH)),
+            ((0, 0), (self.BORDER_WIDTH, self.SCREEN_HEIGHT)),
+            (
+                (0, self.SCREEN_HEIGHT - self.BORDER_WIDTH),
+                (self.SCREEN_WIDTH, self.BORDER_WIDTH),
+            ),
+        ]
+
+        for border in borders:
+            pygame.draw.rect(self.screen, border_colour, pygame.Rect(border))
+        pygame.display.flip()
+
+    def update(self):
+        for ball in self.balls:
+            ball.update()
+            self.paddle.update()
+            ball.check_paddle(self.paddle)
+
+    def game_over(self, text_string="Game Over!"):
+        self.status = "game over"
+        margin = 50
+        font = pygame.font.SysFont(None, 24)
+        text = font.render(text_string, True, pygame.Color("RED"))
+        text_height = text.get_height()
+        text_width = text.get_width()
+        self.screen.blit(
+            text,
+            (
+                (self.SCREEN_WIDTH / 2 - text_width / 2),
+                (self.SCREEN_HEIGHT / 2) - (text_height / 2),
+            ),
+        )
+        box_width = text_width + margin + self.BORDER_WIDTH
+        box_height = text_height + margin + self.BORDER_WIDTH
+        game_over_rect = pygame.Rect(
+            (
+                (self.SCREEN_WIDTH / 2 - box_width / 2),
+                (self.SCREEN_HEIGHT / 2) - (box_height / 2),
+            ),
+            (box_width, box_height),
+        )
+        pygame.draw.rect(
+            self.screen, pygame.Color("White"), game_over_rect, self.BORDER_WIDTH,
+        )
+        pygame.display.update()
 
 
 class Ball:
@@ -10,43 +82,65 @@ class Ball:
         game_setup,
         x_position=None,
         y_position=None,
+        random_pos=False,
         x_velocity=10,
         y_velocity=10,
         radius=10,
     ):
         self.game_setup = game_setup
-        self.screen = game_setup["screen"]
+        self.screen = game_setup.screen
+        self.radius = radius
+        self.set_position(x_position, y_position, random_pos)
+        self.x_velocity = -x_velocity
+        self.y_velocity = -y_velocity
+        self.colour = pygame.Color(game_setup.FOREGROUND_COLOUR)
+        self.bg_colour = pygame.Color(game_setup.BACKGROUND_COLOUR)
+        self.border_and_ball_width = self.game_setup.BORDER_WIDTH + self.radius
+        self.show()
+
+    def set_position(self, x_position, y_position, random_pos=False):
+
         if x_position and y_position:
             self.x_position = x_position
             self.y_position = y_position
+        elif random_pos:
+            self.x_position = (
+                random.randrange(self.game_setup.SCREEN_WIDTH)
+                - self.radius
+                - self.game_setup.BORDER_WIDTH
+            )
+            self.y_position = random.randrange(
+                self.game_setup.BORDER_WIDTH + self.radius,
+                self.game_setup.SCREEN_HEIGHT - self.game_setup.BORDER_WIDTH,
+            )
         else:
             logging.debug(
-                "Position parameters provided, putting ball in default position"
+                "Position parameters not provided, putting ball in default position"
             )
             self.x_position = (
-                game_setup["SCREEN_WIDTH"] - radius - game_setup["BORDER_WIDTH"]
+                self.game_setup.SCREEN_WIDTH
+                - self.radius
+                - self.game_setup.BORDER_WIDTH
             )
-            self.y_position = int(game_setup["SCREEN_HEIGHT"] / 2)
-        self.x_velocity = -x_velocity
-        self.y_velocity = -y_velocity
-        self.radius = radius
-        self.colour = pygame.Color(game_setup["FOREGROUND_COLOUR"])
-        self.bg_colour = pygame.Color(game_setup["BACKGROUND_COLOUR"])
-        self.border_and_ball_width = self.game_setup["BORDER_WIDTH"] + self.radius
+            self.y_position = int(self.game_setup.SCREEN_HEIGHT / 2)+5
 
     def get_coordinates(self):
         return self.x_position, self.y_position
 
     def touching_border(self):
-
+        touching = False
         if self.x_position <= self.border_and_ball_width:
             self.x_velocity = self.x_velocity * -1
+            touching = True
         if (
             self.y_position <= self.border_and_ball_width
             or self.y_position
-            >= self.game_setup["SCREEN_HEIGHT"] - self.border_and_ball_width
+            >= self.game_setup.SCREEN_HEIGHT - self.border_and_ball_width
         ):
             self.y_velocity = self.y_velocity * -1
+            touching = True
+        if touching:
+            self.game_setup.draw_borders()
 
     def show(self):
         pygame.draw.circle(
@@ -61,17 +155,15 @@ class Ball:
         pygame.display.flip()
 
     def update(self):
-
         self.hide()
+        self.touching_border()
         self.x_position = self.x_position + self.x_velocity
         self.y_position = self.y_position + self.y_velocity
-        self.touching_border()
         self.show()
 
     def check_paddle(self, paddle):
         if self.x_position < self.screen.get_width() - self.border_and_ball_width:
             logging.debug("ball in play")
-            return 0
         else:
             logging.info("Ball at end")
             paddle_top, paddle_bottom = paddle.get_position()
@@ -80,22 +172,22 @@ class Ball:
             ):
                 self.x_velocity = self.x_velocity * -1
                 logging.info("Hit - Add Score")
-                return 1
+                self.game_setup.add_score()
             else:
                 logging.info("Missed - Game Over")
-                self.game_setup["status"] = "game over"
-                return 0
+                self.game_setup.game_over()
 
 
 class Paddle:
     def __init__(self, game_setup):
-        self.screen = game_setup["screen"]
-        self.width = game_setup["BORDER_WIDTH"]
+        self.screen = game_setup.screen
+        self.width = game_setup.BORDER_WIDTH
         self.height = int(self.screen.get_height() / 10)
         self.x_position = self.screen.get_width() - self.width
         self.y_position = (self.screen.get_height() / 2) - (self.height / 2)
-        self.colour = pygame.Color(game_setup["FOREGROUND_COLOUR"])
-        self.bg_colour = pygame.Color(game_setup["BACKGROUND_COLOUR"])
+        self.colour = pygame.Color(game_setup.FOREGROUND_COLOUR)
+        self.bg_colour = pygame.Color(game_setup.BACKGROUND_COLOUR)
+        self.show()
 
     def get_position(self):
         top = self.y_position
@@ -122,54 +214,6 @@ class Paddle:
         self.show()
 
 
-def game_over(game_setup, text_string="Game Over!"):
-
-    margin = 50
-    font = pygame.font.SysFont(None, 24)
-    text = font.render(text_string, True, pygame.Color("RED"))
-    text_height = text.get_height()
-    text_width = text.get_width()
-    game_setup["screen"].blit(
-        text,
-        (
-            (game_setup["SCREEN_WIDTH"] / 2 - text_width / 2),
-            (game_setup["SCREEN_HEIGHT"] / 2) - (text_height / 2),
-        ),
-    )
-    box_width = text_width + margin + game_setup["BORDER_WIDTH"]
-    box_height = text_height + margin + game_setup["BORDER_WIDTH"]
-    game_over_rect = pygame.Rect(
-        (
-            (game_setup["SCREEN_WIDTH"] / 2 - box_width / 2),
-            (game_setup["SCREEN_HEIGHT"] / 2) - (box_height / 2),
-        ),
-        (box_width, box_height),
-    )
-    pygame.draw.rect(
-        game_setup["screen"],
-        pygame.Color("White"),
-        game_over_rect,
-        game_setup["BORDER_WIDTH"],
-    )
-    pygame.display.update()
-
-
-def draw_borders(game_setup):
-    border_colour = pygame.Color(game_setup["FOREGROUND_COLOUR"])
-    borders = [
-        ((0, 0), (game_setup["SCREEN_WIDTH"], game_setup["BORDER_WIDTH"])),
-        ((0, 0), (game_setup["BORDER_WIDTH"], game_setup["SCREEN_HEIGHT"])),
-        (
-            (0, game_setup["SCREEN_HEIGHT"] - game_setup["BORDER_WIDTH"]),
-            (game_setup["SCREEN_WIDTH"], game_setup["BORDER_WIDTH"]),
-        ),
-    ]
-
-    for border in borders:
-        pygame.draw.rect(game_setup["screen"], border_colour, pygame.Rect(border))
-    pygame.display.flip()
-
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -190,39 +234,20 @@ def main():
         logging.basicConfig(level=logging.INFO)
     pygame.init()
 
-    game_setup = {
-        "score": 0,
-        "SCREEN_WIDTH": 800,
-        "SCREEN_HEIGHT": 500,
-        "BORDER_WIDTH": 10,
-        "BACKGROUND_COLOUR": "Black",
-        "FOREGROUND_COLOUR": "White",
-        "status": "playing",
-    }
-    game_setup["screen"] = pygame.display.set_mode(
-        (game_setup["SCREEN_WIDTH"], game_setup["SCREEN_HEIGHT"])
-    )
-    draw_borders(game_setup)
-    ball = Ball(game_setup)
-    ball.show()
-    paddle = Paddle(game_setup)
-    paddle.show()
+    game_setup = Game()
 
-    while game_setup["status"] == "playing":
+    while game_setup.status == "playing":
         e = pygame.event.poll()
         if e.type == pygame.QUIT:
             break
         sleep(0.05)
-        ball.update()
-        paddle.update()
-        score_update = ball.check_paddle(paddle)
-        game_setup["score"] += score_update
-        logging.info(f"Score is {game_setup['score']}")
-        if game_setup["status"] == "game over":
-            game_over(game_setup)
+        game_setup.update()
+        logging.info(f"Score is {game_setup.score}")
 
-    while game_setup["status"] == "game over":
+    while game_setup.status == "game over":
         e = pygame.event.poll()
+        if e.type == pygame.QUIT:
+            break
         if e.type == pygame.KEYDOWN:
             break
 
