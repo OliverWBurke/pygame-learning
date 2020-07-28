@@ -13,8 +13,8 @@ class Game:
         self.SCORE_HEIGHT = 25
         self.GAME_HEIGHT = 475
         self.BORDER_WIDTH = 10
-        self.BACKGROUND_COLOUR = "Black"
-        self.FOREGROUND_COLOUR = "White"
+        self.colour = pygame.Color("White")
+        self.bg_colour = pygame.Color("Black")
         self.status = "playing"
         self.score = 0
         self.top_score = top_score
@@ -36,12 +36,12 @@ class Game:
 
     def display_score(self, hide=False):
         if hide:
-            text_colour = self.BACKGROUND_COLOUR
+            text_colour = self.bg_colour
         else:
-            text_colour = self.FOREGROUND_COLOUR
+            text_colour = self.colour
         font = pygame.font.SysFont(None, 24)
 
-        text = font.render(f"Score: {self.score}", True, pygame.Color(text_colour))
+        text = font.render(f"Score: {self.score}", True, text_colour)
         font_height = text.get_height()
 
         self.screen.blit(
@@ -53,7 +53,7 @@ class Game:
         font = pygame.font.SysFont(None, 24)
 
         text = font.render(
-            f"Top Score: {self.top_score}", True, pygame.Color(self.FOREGROUND_COLOUR)
+            f"Top Score: {self.top_score}", True, self.colour
         )
         font_height = text.get_height()
         font_width = text.get_width()
@@ -67,7 +67,6 @@ class Game:
         pygame.display.update()
 
     def draw_borders(self):
-        border_colour = pygame.Color(self.FOREGROUND_COLOUR)
         borders = [
             ((0, 0), (self.SCREEN_WIDTH, self.BORDER_WIDTH)),
             ((0, 0), (self.BORDER_WIDTH, self.GAME_HEIGHT)),
@@ -78,7 +77,7 @@ class Game:
         ]
 
         for border in borders:
-            pygame.draw.rect(self.screen, border_colour, pygame.Rect(border))
+            pygame.draw.rect(self.screen, self.colour, pygame.Rect(border))
         pygame.display.flip()
 
     def update(self):
@@ -111,7 +110,7 @@ class Game:
             (box_width, box_height),
         )
         pygame.draw.rect(
-            self.screen, pygame.Color("White"), game_over_rect, self.BORDER_WIDTH,
+            self.screen, self.colour, game_over_rect, self.BORDER_WIDTH,
         )
         pygame.display.update()
 
@@ -133,8 +132,8 @@ class Ball:
         self.set_position(x_position, y_position, random_pos)
         self.x_velocity = -x_velocity
         self.y_velocity = -y_velocity
-        self.colour = pygame.Color(game_setup.FOREGROUND_COLOUR)
-        self.bg_colour = pygame.Color(game_setup.BACKGROUND_COLOUR)
+        self.colour = game_setup.colour
+        self.bg_colour = game_setup.bg_colour
         self.border_and_ball_width = self.game_setup.BORDER_WIDTH + self.radius
         self.show()
 
@@ -229,8 +228,8 @@ class Paddle:
         self.height = int(self.game_setup.GAME_HEIGHT / 10)
         self.x_position = self.game_setup.SCREEN_WIDTH - self.width
         self.y_position = (self.game_setup.GAME_HEIGHT / 2) - (self.height / 2)
-        self.colour = pygame.Color(self.game_setup.FOREGROUND_COLOUR)
-        self.bg_colour = pygame.Color(self.game_setup.BACKGROUND_COLOUR)
+        self.colour = self.game_setup.colour
+        self.bg_colour = self.game_setup.bg_colour
         self.show()
 
     def get_position(self):
