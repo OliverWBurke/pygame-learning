@@ -1,3 +1,4 @@
+import sys
 from time import sleep
 import random
 import logging
@@ -6,7 +7,7 @@ import pygame
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, top_score=0):
         self.SCREEN_WIDTH = 800
         self.SCREEN_HEIGHT = 500
         self.SCORE_HEIGHT = 25
@@ -16,8 +17,10 @@ class Game:
         self.FOREGROUND_COLOUR = "White"
         self.status = "playing"
         self.score = 0
+        self.top_score = top_score
         self.screen = self.get_screen()
         self.display_score()
+        self.display_top_score()
         self.draw_borders()
         self.paddle = Paddle(self)
         self.balls = []
@@ -43,6 +46,23 @@ class Game:
 
         self.screen.blit(
             text, (10, self.GAME_HEIGHT + (self.SCORE_HEIGHT - font_height) / 2,),
+        )
+        pygame.display.update()
+
+    def display_top_score(self):
+        font = pygame.font.SysFont(None, 24)
+
+        text = font.render(
+            f"Top Score: {self.top_score}", True, pygame.Color(self.FOREGROUND_COLOUR)
+        )
+        font_height = text.get_height()
+        font_width = text.get_width()
+        self.screen.blit(
+            text,
+            (
+                self.SCREEN_WIDTH - font_width - 10,
+                self.GAME_HEIGHT + (self.SCORE_HEIGHT - font_height) / 2,
+            ),
         )
         pygame.display.update()
 
@@ -260,20 +280,30 @@ def main():
 
     game_setup = Game()
 
-    while game_setup.status == "playing":
-        e = pygame.event.poll()
-        if e.type == pygame.QUIT:
-            break
-        sleep(0.05)
-        game_setup.update()
-        logging.info(f"Score is {game_setup.score}")
+    while True:
 
-    while game_setup.status == "game over":
-        e = pygame.event.poll()
-        if e.type == pygame.QUIT:
-            break
-        if e.type == pygame.KEYDOWN:
-            break
+        if game_setup.status == "playing":
+            events = pygame.event.get()
+            for e in events:
+                if e.type == pygame.QUIT:
+                    pygame.display.quit()
+                    pygame.quit()
+                    sys.exit()
+            sleep(0.05)
+            game_setup.update()
+            logging.info(f"Score is {game_setup.score}")
+
+        if game_setup.status == "game over":
+            events = pygame.event.get()
+            for e in events:
+                if e.type == pygame.QUIT:
+                    pygame.display.quit()
+                    pygame.quit()
+                    sys.exit()
+                if e.type == pygame.KEYDOWN:
+                    game_setup = Game(
+                        top_score=max(game_setup.score, game_setup.top_score)
+                    )
 
 
 if __name__ == "__main__":
