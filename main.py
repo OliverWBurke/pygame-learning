@@ -9,12 +9,15 @@ class Game:
     def __init__(self):
         self.SCREEN_WIDTH = 800
         self.SCREEN_HEIGHT = 500
+        self.SCORE_HEIGHT = 25
+        self.GAME_HEIGHT = 475
         self.BORDER_WIDTH = 10
         self.BACKGROUND_COLOUR = "Black"
         self.FOREGROUND_COLOUR = "White"
         self.status = "playing"
         self.score = 0
         self.screen = self.get_screen()
+        self.display_score()
         self.draw_borders()
         self.paddle = Paddle(self)
         self.balls = []
@@ -24,15 +27,32 @@ class Game:
         return pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
 
     def add_score(self):
+        self.display_score(hide=True)
         self.score += 1
+        self.display_score()
+
+    def display_score(self, hide=False):
+        if hide:
+            text_colour = self.BACKGROUND_COLOUR
+        else:
+            text_colour = self.FOREGROUND_COLOUR
+        font = pygame.font.SysFont(None, 24)
+
+        text = font.render(f"Score: {self.score}", True, pygame.Color(text_colour))
+        font_height = text.get_height()
+
+        self.screen.blit(
+            text, (10, self.GAME_HEIGHT + (self.SCORE_HEIGHT - font_height) / 2,),
+        )
+        pygame.display.update()
 
     def draw_borders(self):
         border_colour = pygame.Color(self.FOREGROUND_COLOUR)
         borders = [
             ((0, 0), (self.SCREEN_WIDTH, self.BORDER_WIDTH)),
-            ((0, 0), (self.BORDER_WIDTH, self.SCREEN_HEIGHT)),
+            ((0, 0), (self.BORDER_WIDTH, self.GAME_HEIGHT)),
             (
-                (0, self.SCREEN_HEIGHT - self.BORDER_WIDTH),
+                (0, self.GAME_HEIGHT - self.BORDER_WIDTH),
                 (self.SCREEN_WIDTH, self.BORDER_WIDTH),
             ),
         ]
@@ -47,18 +67,18 @@ class Game:
             self.paddle.update()
             ball.check_paddle(self.paddle)
 
-    def game_over(self, text_string="Game Over!"):
+    def game_over(self):
         self.status = "game over"
         margin = 50
         font = pygame.font.SysFont(None, 24)
-        text = font.render(text_string, True, pygame.Color("RED"))
+        text = font.render("Game Over!", True, pygame.Color("RED"))
         text_height = text.get_height()
         text_width = text.get_width()
         self.screen.blit(
             text,
             (
                 (self.SCREEN_WIDTH / 2 - text_width / 2),
-                (self.SCREEN_HEIGHT / 2) - (text_height / 2),
+                (self.GAME_HEIGHT / 2) - (text_height / 2),
             ),
         )
         box_width = text_width + margin + self.BORDER_WIDTH
@@ -66,7 +86,7 @@ class Game:
         game_over_rect = pygame.Rect(
             (
                 (self.SCREEN_WIDTH / 2 - box_width / 2),
-                (self.SCREEN_HEIGHT / 2) - (box_height / 2),
+                (self.GAME_HEIGHT / 2) - (box_height / 2),
             ),
             (box_width, box_height),
         )
@@ -122,7 +142,7 @@ class Ball:
                 - self.radius
                 - self.game_setup.BORDER_WIDTH
             )
-            self.y_position = int(self.game_setup.SCREEN_HEIGHT / 2)+5
+            self.y_position = int(self.game_setup.GAME_HEIGHT / 2) + 5
 
     def get_coordinates(self):
         return self.x_position, self.y_position
@@ -135,7 +155,7 @@ class Ball:
         if (
             self.y_position <= self.border_and_ball_width
             or self.y_position
-            >= self.game_setup.SCREEN_HEIGHT - self.border_and_ball_width
+            >= self.game_setup.GAME_HEIGHT - self.border_and_ball_width
         ):
             self.y_velocity = self.y_velocity * -1
             touching = True
@@ -173,6 +193,9 @@ class Ball:
                 self.x_velocity = self.x_velocity * -1
                 logging.info("Hit - Add Score")
                 self.game_setup.add_score()
+                if self.game_setup.score % 3 == 0:
+                    self.x_velocity += 2 * int(self.x_velocity / abs(self.x_velocity))
+                    self.y_velocity += 2 * int(self.y_velocity / abs(self.y_velocity))
             else:
                 logging.info("Missed - Game Over")
                 self.game_setup.game_over()
@@ -180,13 +203,14 @@ class Ball:
 
 class Paddle:
     def __init__(self, game_setup):
+        self.game_setup = game_setup
         self.screen = game_setup.screen
         self.width = game_setup.BORDER_WIDTH
-        self.height = int(self.screen.get_height() / 10)
-        self.x_position = self.screen.get_width() - self.width
-        self.y_position = (self.screen.get_height() / 2) - (self.height / 2)
-        self.colour = pygame.Color(game_setup.FOREGROUND_COLOUR)
-        self.bg_colour = pygame.Color(game_setup.BACKGROUND_COLOUR)
+        self.height = int(self.game_setup.GAME_HEIGHT / 10)
+        self.x_position = self.game_setup.SCREEN_WIDTH - self.width
+        self.y_position = (self.game_setup.GAME_HEIGHT / 2) - (self.height / 2)
+        self.colour = pygame.Color(self.game_setup.FOREGROUND_COLOUR)
+        self.bg_colour = pygame.Color(self.game_setup.BACKGROUND_COLOUR)
         self.show()
 
     def get_position(self):
@@ -209,8 +233,8 @@ class Paddle:
         self.y_position = pygame.mouse.get_pos()[1]
         if self.y_position < self.width:
             self.y_position = self.width
-        if self.y_position > self.screen.get_height() - self.height - self.width:
-            self.y_position = self.screen.get_height() - self.height - self.width
+        if self.y_position > self.game_setup.GAME_HEIGHT - self.height - self.width:
+            self.y_position = self.game_setup.GAME_HEIGHT - self.height - self.width
         self.show()
 
 
